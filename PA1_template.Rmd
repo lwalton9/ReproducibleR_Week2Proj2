@@ -1,0 +1,140 @@
+---
+title: "PA1_template"
+author: "Lori Walton"
+date: "September 5, 2017"
+#output: html_document
+#output:
+#  md_document:
+#    variant: markdown_github
+
+#output: html_document
+---
+---
+###Coursera Reproducible Research Week 2: Project 1
+#### Step #1 Read in the Data
+
+```{r, warnings=FALSE, message=FALSE}
+getwd()
+#Read in CSV File
+ActivityTable <- read.csv("activity.csv", header = TRUE, na.strings="NA")
+head(ActivityTable)
+str(ActivityTable)
+#change Date type to date class
+ActivityTable$date <- as.Date(as.character(ActivityTable$date))
+
+#NEEDED TO INSTALL THESE PACKAGES FOR RMARKDOWN TO WORK
+#install.packages("stringi",type="win.binary")
+#install.packages("rmarkdown")
+```
+####Question #1: What is the total number of steps taken per day
+##### Calculate total number of steps taken per day
+##### Make a Histogram of Total number of steps taken per day
+##### Calculate & Report mean & median of the total number of steps taken per day
+
+```{r, warnings=FALSE, message=FALSE}
+#Calculate Total Steps
+TotSteps <- tapply(ActivityTable$steps, ActivityTable$date, sum)
+TotSteps
+#Create a Histogram of Total Steps
+hist(TotSteps,main="Histogram of Total Number of Steps Taken Each Day", xlab="Total Number of Steps",
+col="blue")
+#Calculate Mean & Median of the total number of steps taken per day
+MeanSteps <- mean(TotSteps, na.rm=TRUE)
+MeanSteps
+MedianSteps <- median(TotSteps, na.rm=TRUE)
+MedianSteps
+```
+The mean of the total number of steps taken per day is 10766.19.  The median of the total number of steps taken per day is 10765. 
+
+#####Questions #2: What is the average daily activity pattern
+#####Make a Time Series Plot of the 5 minute internal(x-axis) and avg number of steps taken,avg all days(y-axis)
+#####Which 5 minute interval, on avg across all days, contains max number of steps?
+
+```{r, warnings=FALSE, message=FALSE}
+#Average number of steps across all days by 5 minute intervals
+MeanSteps5 <- aggregate(steps ~ interval,ActivityTable,mean)
+#MeanSteps5
+#Create Time Series
+Steps5TimeSeries <- ts(MeanSteps5$steps)
+#Steps5TimeSeries
+plot.ts(Steps5TimeSeries,main="Time Series of 5-Minute Intervals and Avg Number of Steps Taken,avg all days")
+#Which 5 Minute interval contains max # of steps
+MaxSteps <- max(MeanSteps5$steps)
+#MaxSteps
+MeanSteps5[MeanSteps5$steps == MaxSteps, ]
+```
+The 5-minute interval, on average across all the days in the dataset, which contains the maximum number of steps is Interval 835. 
+
+
+#####Question #3: Assessing Missing Values
+###### Calculate & Report total number of rows with NAs
+###### Devise a strategy for filling in all of the missing values in the dataset
+###### Create a new dataset with missing data filled in
+###### Make a histogram of total number of steps each day; report mean and median of total number of steps per day
+######Do these values different from estimates in Q1. What is impact of imputing missing values
+
+```{r, warnings=FALSE, message=FALSE}
+#Number of NAs
+StepsNACount <- sum(is.na(ActivityTable$steps))
+StepsNACount
+```
+The total number of mising values in the dataset is 2,304.
+
+```{r, warnings=FALSE, message=FALSE}
+#Impute Missing Data & Create New Dataset with missing values filled in
+ActivityTable_Impute <- ActivityTable
+NAdata <- is.na(ActivityTable_Impute$steps)
+#NAdata
+NotNAdata <- ActivityTable_Impute[!is.na(ActivityTable_Impute$steps),]
+#NotNAdata
+Activitymeans <- tapply(NotNAdata$steps, NotNAdata$interval, mean, na.rm=TRUE, simplify=TRUE)
+#Activitymeans
+ActivityTable_Impute$steps[NAdata] <- Activitymeans[as.character(ActivityTable_Impute$interval[NAdata])]
+#check that NAs are filled with Data
+sum(is.na(ActivityTable_Impute$steps))
+
+#Calculate Total Steps taken each day with new DataFrame
+TotSteps_Impute <- tapply(ActivityTable_Impute$steps, ActivityTable_Impute$date, sum)
+TotSteps_Impute
+#Create a Histogram of Total Steps
+hist(TotSteps_Impute,main="Histogram of Total Number of Steps Taken Each Day-Imputed DF", xlab="Total Number of Steps",
+col="blue")
+#Calculate Mean & Median of the total number of steps taken per day
+MeanSteps_Impute <- mean(TotSteps_Impute, na.rm=TRUE)
+MeanSteps_Impute
+MedianSteps_Impute <- median(TotSteps_Impute, na.rm=TRUE)
+MedianSteps_Impute
+```
+The mean of the total number of steps taken per day for imputed Table is 10766.19 which is the same as the mean of the Table with NAs present  The median of the total number of steps taken per day is 10766.19 which is slighly higher than the median of the Table with the NAs present.
+
+The impact of imputing missing data on the estimates of the total daily number of steps is that overall the data becomes more towards the mean.
+
+#####Question #4: Are there any differences in activity patterns between weekdays and weekends?
+```{r, warnings=FALSE, message=FALSE}
+
+#Create new factor variable with two levels-weekday and weekend
+ActivityTable_Impute$weekday <- weekdays(ActivityTable_Impute$date)
+#ActivityTable_Impute$weekday
+ActivityTable_Impute$DayWeek <- ifelse (ActivityTable_Impute$weekday == "Saturday" | ActivityTable_Impute$weekday == "Sunday", "Weekend", "Weekday")
+ActivityTable_Impute$DayWeek <- as.factor(ActivityTable_Impute$DayWeek)
+str(ActivityTable_Impute)
+
+#Make a Panel Plot
+#install.packages("lattice")
+library(lattice)
+PPLOT_weekactivity <- aggregate(steps ~ DayWeek+interval, data=ActivityTable_Impute, FUN=mean)
+#PPLOT_weekactivity <- aggregate(ActivityTable_Impute$steps, by=list(ActivityTable_Impute$DayWeek, #ActivityTable_Impute$interval), mean)
+#PPLOT_weekactivity
+#head(PPLOT_weekactivity)
+#str(PPLOT_weekactivity)
+xyplot(steps ~ interval | DayWeek,
+       layout = c(1, 2),
+       xlab="Interval",
+       ylab="Number of steps",
+       type="l",
+       lty=1,
+       data=PPLOT_weekactivity, main='Panel Plot containing Times series of Interval & Avg Steps across week')
+       
+```
+
+
